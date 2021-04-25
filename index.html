@@ -5,11 +5,64 @@
     <script src="https://d3js.org/topojson.v3.min.js"></script>
   </head>
   <style>
+    .nation {
+        fill: #ddd;
+      }
 
+    .outline {
+      stroke: #fff;
+      stroke-width: 1px;
+      fill: none;    
+    }
+    #infoblock {
+      word-break: break-all;
+    }
   </style>
   <body>
+    <svg id = "deaths_map" width = 975 height = 610></svg>
+    <div id = "infoblock"></div>
     <script>
+      const getData = async function(){
+        // data set from https://mappingpoliceviolence.org/ 
+        const data = await d3.csv("policeCleaned.csv");
+        // mesh / outline dataset from INFO 3300 repository <-- Jeff Rzeszotarski
+        const svg = d3.select("#deaths_map");
+        const map = svg.append("g");
+        const width = svg.attr("width");
+        const height = svg.attr("height");
+        const us = await d3.json("counties-10m.json");
+        var projection = d3.geoAlbersUsa().scale(1300).translate([487.5, 305]);
+        var path = d3.geoPath().projection(projection);
+        var nation = topojson.feature(us, us.objects.nation);
+        var statesMesh = topojson.mesh(us, us.objects.states);
+        
+        map.selectAll("path.nation").data(nation.features)
+         .join("path")
+         .attr("class", "nation")
+         .attr("d", path);
+  
+        map.append("path").datum(statesMesh)
+         .attr("class","outline")
+         .attr("d", path);
 
+        function wrap(text, width){
+          
+        }
+         
+        function mouseIn(){
+
+          block = d3.select("#infoblock")
+
+          let point = d3.select(this);
+          point.attr("opacity", 1)
+                .attr("stroke", "black")
+                .attr("stroke-width", 2);
+          
+        }
+        function mouseOut(){
+
+        }
+      }
     </script>
   </body>
 </html>
