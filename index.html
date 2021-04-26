@@ -8,10 +8,16 @@
 
      html{
       font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+      background-color: #B7B7B8;
+      color: white;
+     }
+
+     svg {
+       fill: white;
      }
 
      .nation {
-        fill: #ddd;
+        fill: lightgrey;
       }
 
     .outline {
@@ -27,10 +33,13 @@
     }
     .map{
       display: inline-block;
+      background-color: white;
+      height: 625px;
     }
     .filter{
       width: 75%;
       margin: 20px;
+      margin-bottom: 0px;
       display:inline-block
     }
     .filters{
@@ -52,10 +61,14 @@
     }
     #victims, #individuals{
       margin: 30px;
+      display: flex;
+      margin-top: 0px;
+      margin-bottom: 0px;
     }
     .INFO{
       width: 50%;
       margin: 20px;
+      margin-top: 0;
     }
   </style>
   <body>
@@ -65,7 +78,7 @@
         </div>
         <div class="filters">
           <div class = "filter" id = "filter"></div> 
-          <svg id = "victims" width = 301 height = 325 ></svg>
+          <svg id = "victims" width = 301 height = 460 ></svg>
           <svg id ="individuals" width = 301 height = "200" ></svg>
         </div>
         
@@ -237,25 +250,37 @@
             xpos += 20;
             xpos = xpos % 227;
             if(xpos === 0) {
-              ypos += 20;
+              ypos += 30;
               ypos = ypos % 615;
               xpos = 27;
             }
           })
 
-          deathsInCity = sidebar.selectAll("circle.death").data(deaths)
-                          .join("circle")
+          deathsInCity = sidebar.selectAll("image.death").data(deaths)
+                          .enter()
+                          .append('image')
+                          .attr("xlink:href", "standing-up-man-.svg")
                           .attr("class","death")
                           .attr("r", 5)
                           .attr("fill", "darkred")
-                          .attr("cx", d => d.xposition)
-                          .attr("cy", d => d.yposition);
+                          .attr("x", d => d.xposition)
+                          .attr("y", d => d.yposition)
+                          .attr("width", 20)
+                          .attr("height", 20);
                           
-           
-          d3.selectAll("circle.death").on("click", clickedDeath);
+          let lastMan;
+
+          d3.selectAll("image.death").on("click", clickedDeath);
           function clickedDeath() {
             info_textbox.html(''); 
             let d = d3.select(this).datum();
+            if(lastMan != null) {
+              lastMan.attr("xlink:href", "standing-up-man-.svg");
+            }
+
+            lastMan = d3.select(this);
+
+            d3.select(this).attr("xlink:href", "red-man-standing.svg")
             console.log(d);
             let name = `Victim's Name: ${d['Victim\'s name']}`;
             let age = `Victim's Age: ${d['Victim\'s age']}`;
