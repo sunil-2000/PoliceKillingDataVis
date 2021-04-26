@@ -22,17 +22,20 @@
         // data set from https://mappingpoliceviolence.org/ 
         let data = await d3.csv("police_cleaned.csv");
         
+
         // mesh / outline dataset from INFO 3300 repository <-- Jeff Rzeszotarski
         const svg = d3.select("#deathsmap");
-        const map = svg.append("g");
         const width = svg.attr("width");
         const height = svg.attr("height");
+        const map = svg.append("g");
+        
         const us = await d3.json("counties-10m.json");
         var projection = d3.geoAlbersUsa().scale(1300).translate([487.5, 305]);
         var path = d3.geoPath().projection(projection);
         var nation = topojson.feature(us, us.objects.nation);
         var statesMesh = topojson.mesh(us, us.objects.states);
-
+        
+        
         data.forEach( d => {
           let comma = d.coordinates.indexOf(",");
           d.latitude = Number(d.coordinates.substring(1, comma));
@@ -73,8 +76,23 @@
          .attr("opacity", 0.4)
          .attr("cx", d => d[1][0].position[0])
          .attr("cy", d => d[1][0].position[1]);
+
+
+        var zoomG = svg.append("g");
+
+        var zoom = d3.zoom()
+                    .scaleExtent([1, Infinity])
+                    .translateExtent([[0, 0], [width, height]])
+                    .extent([[0, 0], [width, height]])
+                    .on('zoom', function(event) {
+                        svg.selectAll('path').attr('transform', event.transform)
+                        map.selectAll('circle').attr('transform', event.transform);
+                });
+        svg.call(zoom);
+
       }
       getData();
+  
     </script>
   </body>
 </html>
