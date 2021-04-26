@@ -5,6 +5,11 @@
     <script src="https://d3js.org/topojson.v3.min.js"></script>
   </head>
   <style>
+
+     html{
+      font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
+     }
+
      .nation {
         fill: #ddd;
       }
@@ -45,8 +50,12 @@
       flex-direction: column;
       width: 100%;
     }
-    #victims{
+    #victims, #individuals{
       margin: 30px;
+    }
+    .INFO{
+      width: 50%;
+      margin: 20px;
     }
   </style>
   <body>
@@ -56,8 +65,15 @@
         </div>
         <div class="filters">
           <div class = "filter" id = "filter"></div> 
-          <svg id = "victims" width = 301 height = 610></svg>
+          <svg id = "victims" width = 301 height = 325 ></svg>
+          <svg id ="individuals" width = 301 height = "200" ></svg>
         </div>
+        
+    </div>
+    <div class = "INFO">
+      Navigate the map by zooming and dragging the cursor. Click on a point that 
+        represents a city or town to view the number of killings. Then click on a killing 
+        to get more information.
     </div>
     
     <script>
@@ -179,6 +195,18 @@
                          .attr("height", 130);  // set width later
         const textbox = mouseover.append("g").attr("transform","translate(20,10)");
 
+        const info = d3.select("#individuals");
+        const info_mouseover = info.append("g").attr("class","info_mouseover")
+                       .attr("transform",`translate(0,0)`);
+        const info_frame = info_mouseover.append("rect").attr("class","info_frame")
+                         // we style this in <head>
+                         .attr("x", 0).attr("y", 0)
+                         .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
+                         .attr("height", 130);  // set width later
+        const info_textbox = info_mouseover.append("g").attr("transform","translate(20,10)");
+
+        let deathsInCity;
+
         function clickedCircle() {
           if(lastClicked != null) {
             lastClicked.attr("stroke-width", 0);
@@ -194,6 +222,7 @@
           
           console.log(dot.datum());
           textbox.html(''); 
+
           textbox.append("text").text(dot.datum()[0])
                  .attr("x", 0).attr("y", 10);
 
@@ -214,17 +243,39 @@
             }
           })
 
-          sidebar.selectAll("circle.death").data(deaths)
+          deathsInCity = sidebar.selectAll("circle.death").data(deaths)
                           .join("circle")
                           .attr("class","death")
                           .attr("r", 5)
                           .attr("fill", "darkred")
                           .attr("cx", d => d.xposition)
                           .attr("cy", d => d.yposition);
+                          
+           
+          d3.selectAll("circle.death").on("click", clickedDeath);
+          function clickedDeath() {
+            info_textbox.html(''); 
+            let d = d3.select(this).datum();
+            console.log(d);
+            let name = `Victim's Name: ${d['Victim\'s name']}`;
+            let age = `Victim's Age: ${d['Victim\'s age']}`;
+            let gender = `Victim's Gender: ${d['Victim\'s gender']}`;
+            let race = `Victim's Race: ${d['Victim\'s race']}`;
+
+            info_textbox.append("text").text(name)
+                  .attr("x", 0).attr("y", 10);
+            info_textbox.append("text").text(age)
+                  .attr("x", 0).attr("y", 30);
+            info_textbox.append("text").text(gender)
+                  .attr("x", 0).attr("y", 50);
+            info_textbox.append("text").text(race)
+                  .attr("x", 0).attr("y", 70);
+          }
         }
+
       }
     getData();
-  
+    
     </script>
   </body>
 </html>
