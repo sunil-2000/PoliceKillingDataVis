@@ -5,11 +5,76 @@
     <script src="https://d3js.org/topojson.v3.min.js"></script>
   </head>
   <style>
+     .nation {
+        fill: #ddd;
+      }
 
+    .outline {
+      stroke: #fff;
+      stroke-width: 1px;
+      fill: none;
+    }
   </style>
   <body>
+    <svg id = "deathsmap" width = 975 height = 610 ></svg>
     <script>
+      const getData = async function(){
+        // data set from https://mappingpoliceviolence.org/ 
+        let data = await d3.csv("police_cleaned.csv");
+        
+        // mesh / outline dataset from INFO 3300 repository <-- Jeff Rzeszotarski
+        const svg = d3.select("#deathsmap");
+        const map = svg.append("g");
+        const width = svg.attr("width");
+        const height = svg.attr("height");
+        const us = await d3.json("counties-10m.json");
+        var projection = d3.geoAlbersUsa().scale(1300).translate([487.5, 305]);
+        var path = d3.geoPath().projection(projection);
+        var nation = topojson.feature(us, us.objects.nation);
+        var statesMesh = topojson.mesh(us, us.objects.states);
 
+        data.forEach( d => {
+          let comma = d.coordinates.indexOf(",");
+          d.latitude = Number(d.coordinates.substring(1, comma));
+          d.longitude = Number(d.coordinates.substring(comma + 1, d.coordinates.length - 1));
+          d.position = projection( [d.longitude, d.latitude] );
+        })
+
+        data = data.filter(function(d){
+          return d.position !== null;
+        });
+
+        data.forEach( d => {
+          if(d.position === null)
+            console.log(d);
+        })
+
+        let groups = d3.group(data, d => d.City);
+
+        let new_groups = Array.from(groups);
+
+        let circleExtent = d3.extent(new_groups, d => d[1].length)
+        let circleScale = d3.scaleLinear().domain(circleExtent).range([1, 15]);
+
+        map.selectAll("path.nation").data(nation.features)
+         .join("path")
+         .attr("class", "nation")
+         .attr("d", path);
+  
+        map.append("path").datum(statesMesh)
+         .attr("class","outline")
+         .attr("d", path);
+
+        map.selectAll("circle.dot").data(new_groups)
+         .join("circle")
+         .attr("class","dot")
+         .attr("r", d => circleScale(d[1].length))
+         .attr("fill", "darkred")
+         .attr("opacity", 0.4)
+         .attr("cx", d => d[1][0].position[0])
+         .attr("cy", d => d[1][0].position[1]);
+      }
+      getData();
     </script>
   </body>
 </html>
