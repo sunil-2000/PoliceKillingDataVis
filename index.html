@@ -24,16 +24,29 @@
       width: 65%;
     }
     .filter{
-      width: 25%;
+      width: 50%;
       margin: 20px;
       display:inline-block
     }
+    .filters{
+      display:flex;
+      flex-direction: column;
+      width: 100%;
+    }
     #slider{
       width: 100%;
-      margin: 20px;
+      margin: 30px;
     }
     #slide-label{
-      margin: 20px;
+      margin: 30px;
+    }
+    .side{
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+    }
+    #victims{
+      margin: 30px;
     }
   </style>
   <body>
@@ -41,11 +54,12 @@
       <div class = "map">
         <svg class = "child" id = "deathsmap" width = 975 height = 610 ></svg>
       </div>
-      <div class = "filter" id = "filter">
-        <div id = "years"></div>
+      <div class = "side">
+      <div class = "filter" id = "filter"></div> 
+      <svg id = "victims" width = 301 height = 610></svg>
       </div>
-
     </div>
+    
     <script>
       const getData = async function(){
         // data set from https://mappingpoliceviolence.org/ 
@@ -91,16 +105,17 @@
          .attr("class","outline")
          .attr("d", path);
 
-        map.selectAll("circle.dot").data(new_groups)
-         .join("circle")
-         .attr("class","dot")
-         .attr("r", d => circleScale(d[1].length))
-         .attr("fill", "darkred")
-         .attr("opacity", 0.4)
-         .attr("cx", d => d[1][0].position[0])
-         .attr("cy", d => d[1][0].position[1])
-         .attr("data", d => d[1].length);
-
+        function drawCircs(){
+            map.selectAll("circle.dot").data(new_groups)
+                    .join("circle")
+                    .attr("class","dot")
+                    .attr("r", d => circleScale(d[1].length))
+                    .attr("fill", "darkred")
+                    .attr("opacity", 0.4)
+                    .attr("cx", d => d[1][0].position[0])
+                    .attr("cy", d => d[1][0].position[1])
+                    .attr("data", d => d[1].length);
+        }
 
         var zoom = d3.zoom()
                     .scaleExtent([1, Infinity])
@@ -111,12 +126,8 @@
                         map.selectAll('circle').attr('transform', event.transform);
                 });
         svg.call(zoom);
-    
-        let years = Array.from(new Set( d3.map(data, d => d["year"]))).sort();
-        console.log(years);
-        console.log(new_groups[0]);
         
-        console.log(circleExtent);
+
         d3.select("div#filter").append("span").attr("id", "slide-label").text("More than 1 killing")
         d3.select("div#filter").append("input")
                                 .attr("type", "range")
@@ -129,7 +140,8 @@
                                 .on("input", function(){
                                   updateSlide(this.value)
                                 });
-
+                                
+        drawCircs();    
         function updateSlide(v){
           //d3.select("#slider").property("value", v);
           let lastWord = " killings";
@@ -138,22 +150,75 @@
           }
 
           d3.select("#slide-label").text("More than " + v + lastWord);
-          console.log(v)
+   
           d3.selectAll("circle.dot").each( function () {
             let circle = d3.select(this);
             let data = circle.attr("data")
-            // console.log(typeof(v))
-            // console.log(typeof(data))
-            //console.log(data);
             if (Number(data) < Number(v)){
               circle.attr("visibility", "hidden");
             }else{
               circle.attr("visibility", "");
             }
-          })
+          }) 
         }
-       
-    }
+
+        d3.selectAll("circle.dot").on("click", clickedCircle);
+        
+        let lastClicked;
+        const sidebar = d3.select("#victims");
+        const mouseover = sidebar.append("g").attr("class","mouseover")
+                       .attr("transform",`translate(0,0)`);
+        const frame = mouseover.append("rect").attr("class","frame")
+                         // we style this in <head>
+                         .attr("x", 0).attr("y", 0)
+                         .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
+                         .attr("height", 130);  // set width later
+        const textbox = mouseover.append("g").attr("transform","translate(10,10)");
+
+        function clickedCircle() {
+          if(lastClicked != null) {
+            lastClicked.attr("stroke-width", 0);
+          }
+
+          let dot = d3.select(this);
+
+          lastClicked = dot;
+
+          d3.select(this).attr("stroke","black")
+                         .attr("stroke-opacity", "100%")
+                         .attr("stroke-width", d => circleScale(d[1].length) / 4);
+          
+          console.log(dot.datum());
+          textbox.html(''); 
+          textbox.append("text").text(dot.datum()[0])
+                 .attr("x", 0).attr("y", 10);
+
+          let deaths = dot.datum()[1];
+
+          let xpos = 50;
+          let ypos = 50;
+
+          deaths.forEach(d => {
+            d.xposition = xpos;
+            d.yposition = ypos;
+            xpos += 20;
+            xpos = xpos % 250;
+            if(xpos === 0) {
+              ypos += 20;
+              ypos = ypos % 615;
+              xpos = 50;
+            }
+          })
+
+          sidebar.selectAll("circle.death").data(deaths)
+                          .join("circle")
+                          .attr("class","death")
+                          .attr("r", 5)
+                          .attr("fill", "darkred")
+                          .attr("cx", d => d.xposition)
+                          .attr("cy", d => d.yposition);
+        }
+      }
     getData();
   
     </script>
