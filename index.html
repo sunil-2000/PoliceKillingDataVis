@@ -21,10 +21,10 @@
       width: 100%;
     }
     .map{
-      width: 65%;
+      display: inline-block;
     }
     .filter{
-      width: 50%;
+      width: 75%;
       margin: 20px;
       display:inline-block
     }
@@ -51,13 +51,13 @@
   </style>
   <body>
     <div id = "master-container">
-      <div class = "map">
-        <svg class = "child" id = "deathsmap" width = 975 height = 610 ></svg>
-      </div>
-      <div class = "side">
-      <div class = "filter" id = "filter"></div> 
-      <svg id = "victims" width = 301 height = 610></svg>
-      </div>
+        <div class="map">
+          <svg class = "child" id = "deathsmap" width = 975 height = 610 ></svg>
+        </div>
+        <div class="filters">
+          <div class = "filter" id = "filter"></div> 
+          <svg id = "victims" width = 301 height = 610></svg>
+        </div>
     </div>
     
     <script>
@@ -82,7 +82,11 @@
           let comma = d.coordinates.indexOf(",");
           d.latitude = Number(d.coordinates.substring(1, comma));
           d.longitude = Number(d.coordinates.substring(comma + 1, d.coordinates.length - 1));
-          d.position = projection( [d.longitude, d.latitude] );
+          if (d.City === "Indianapolis"){ // indianapolis falsely classified by geocoder 
+            d.position = projection ([-86.1583502, 39.7683331])
+          }else{
+            d.position = projection( [d.longitude, d.latitude] );
+          }
         })
 
         data = data.filter(function(d){
@@ -173,7 +177,7 @@
                          .attr("x", 0).attr("y", 0)
                          .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
                          .attr("height", 130);  // set width later
-        const textbox = mouseover.append("g").attr("transform","translate(10,10)");
+        const textbox = mouseover.append("g").attr("transform","translate(20,10)");
 
         function clickedCircle() {
           if(lastClicked != null) {
@@ -195,18 +199,18 @@
 
           let deaths = dot.datum()[1];
 
-          let xpos = 50;
+          let xpos = 27;
           let ypos = 50;
 
           deaths.forEach(d => {
             d.xposition = xpos;
             d.yposition = ypos;
             xpos += 20;
-            xpos = xpos % 250;
+            xpos = xpos % 227;
             if(xpos === 0) {
               ypos += 20;
               ypos = ypos % 615;
-              xpos = 50;
+              xpos = 27;
             }
           })
 
