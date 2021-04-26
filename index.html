@@ -17,6 +17,7 @@
   </style>
   <body>
     <svg id = "deathsmap" width = 975 height = 610 ></svg>
+    <svg id = "victims" width = 301 height = 610></svg>
     <script>
       const getData = async function(){
         // data set from https://mappingpoliceviolence.org/ 
@@ -68,15 +69,72 @@
          .attr("class","outline")
          .attr("d", path);
 
-        map.selectAll("circle.dot").data(new_groups)
-         .join("circle")
-         .attr("class","dot")
-         .attr("r", d => circleScale(d[1].length))
-         .attr("fill", "darkred")
-         .attr("opacity", 0.4)
-         .attr("cx", d => d[1][0].position[0])
-         .attr("cy", d => d[1][0].position[1]);
+        let circles = map.selectAll("circle.dot").data(new_groups)
+                          .join("circle")
+                          .attr("class","dot")
+                          .attr("r", d => circleScale(d[1].length))
+                          .attr("fill", "darkred")
+                          .attr("opacity", 0.4)
+                          .attr("cx", d => d[1][0].position[0])
+                          .attr("cy", d => d[1][0].position[1]);
 
+
+        d3.selectAll(".dot").on("click", clickedCircle);
+        
+        let lastClicked;
+        const sidebar = d3.select("#victims");
+        const mouseover = sidebar.append("g").attr("class","mouseover")
+                       .attr("transform",`translate(0,0)`);
+        const frame = mouseover.append("rect").attr("class","frame")
+                         // we style this in <head>
+                         .attr("x", 0).attr("y", 0)
+                         .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
+                         .attr("height", 130);  // set width later
+        const textbox = mouseover.append("g").attr("transform","translate(10,10)");
+
+        function clickedCircle() {
+          if(lastClicked != null) {
+            lastClicked.attr("stroke-width", 0);
+          }
+
+          let dot = d3.select(this);
+
+          lastClicked = dot;
+
+          d3.select(this).attr("stroke","black")
+                         .attr("stroke-opacity", "100%")
+                         .attr("stroke-width", d => circleScale(d[1].length) / 4);
+          
+          console.log(dot.datum());
+          textbox.html(''); 
+          textbox.append("text").text(dot.datum()[0])
+                 .attr("x", 0).attr("y", 10);
+
+          let deaths = dot.datum()[1];
+
+          let xpos = 50;
+          let ypos = 50;
+
+          deaths.forEach(d => {
+            d.xposition = xpos;
+            d.yposition = ypos;
+            xpos += 20;
+            xpos = xpos % 250;
+            if(xpos === 0) {
+              ypos += 20;
+              ypos = ypos % 615;
+              xpos = 50;
+            }
+          })
+
+          sidebar.selectAll("circle.death").data(deaths)
+                          .join("circle")
+                          .attr("class","death")
+                          .attr("r", 5)
+                          .attr("fill", "darkred")
+                          .attr("cx", d => d.xposition)
+                          .attr("cy", d => d.yposition);
+        }
 
         var zoomG = svg.append("g");
 
@@ -89,7 +147,6 @@
                         map.selectAll('circle').attr('transform', event.transform);
                 });
         svg.call(zoom);
-
       }
       getData();
   
