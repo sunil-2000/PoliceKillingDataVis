@@ -51,7 +51,6 @@
         // data set from https://mappingpoliceviolence.org/ 
         let data = await d3.csv("police_cleaned.csv");
         
-
         // mesh / outline dataset from INFO 3300 repository <-- Jeff Rzeszotarski
         const svg = d3.select("#deathsmap");
         const width = svg.attr("width");
@@ -127,12 +126,10 @@
                                 .attr("id", "slider")
                                 .attr("width", "400px")
                                 .attr("steps", 1)
-                                .on("change", function(){
+                                .on("input", function(){
                                   updateSlide(this.value)
                                 });
-                                // .on("input", function(){
-                                //   updateMap(this.value)});
-        
+
         function updateSlide(v){
           //d3.select("#slider").property("value", v);
           let lastWord = " killings";
@@ -155,17 +152,6 @@
             }
           })
         }
-        // function updateMap(v){
-        //   d3.selectAll("#dot").each( function () {
-        //     let circle = d3.select(this);
-        //     console.log("m")
-        //     if (circle.data < v){
-        //       circle.attr("visibility", "hidden");
-        //     }else{
-        //       circle.attr("visibility", "");
-        //     }
-        //   })
-        // }
        
     }
     getData();
