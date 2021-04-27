@@ -66,28 +66,33 @@
       margin-bottom: 0px;
     }
     .INFO{
-      width: 50%;
-      margin: 20px;
-      margin-top: 0;
+      margin-top: 20px;
     }
+    .description{
+      margin-left: 50px;
+      margin-right: 50px;
+      margin-bottom: 10px;
+    }
+
   </style>
   <body>
+
     <div id = "master-container">
         <div class="map">
           <svg class = "child" id = "deathsmap" width = 975 height = 610 ></svg>
+          <div class = "INFO">
+            Navigate the map by scrolling to zoom and dragging the cursor to move. Click on a point that 
+              represents a city or town to view the number of killings. Then, click on a specific killing 
+              to get more information about the person.
+          </div>
         </div>
         <div class="filters">
           <div class = "filter" id = "filter"></div> 
           <svg id = "victims" width = 301 height = 460></svg>
-          <svg id ="individuals" width = 301 height = "200" ></svg>
+          <svg id ="individuals" width = 301 height = "145" ></svg>
         </div>
-        
     </div>
-    <div class = "INFO">
-      Navigate the map by zooming and dragging the cursor. Click on a point that 
-        represents a city or town to view the number of killings. Then click on a killing 
-        to get more information.
-    </div>
+    
     
     <script>
       const getData = async function(){
@@ -207,7 +212,6 @@
                          .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
                          .attr("height", 130);  // set width later
         const textbox = mouseover.append("g").attr("transform","translate(20,10)");
-
         const info = d3.select("#individuals");
         const info_mouseover = info.append("g").attr("class","info_mouseover")
                        .attr("transform",`translate(0,0)`);
@@ -217,42 +221,27 @@
                          .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
                          .attr("height", 130);  // set width later
         const info_textbox = info_mouseover.append("g").attr("transform","translate(20,10)");
-
+        
         let deathsInCity;
-
-        function clickedCircle() {
-          info_textbox.html(''); 
-          const victimSvg = d3.select("#victims");
-          victimSvg.selectAll("image.death").remove();
-          if(lastClicked != null) {
-            lastClicked.attr("stroke-width", 0);
-          }
-
-          let dot = d3.select(this);
-
-          lastClicked = dot;
-
-          d3.select(this).attr("stroke","black")
-                         .attr("stroke-opacity", "100%")
-                         .attr("stroke-width", d => circleScale(d[1].length) / 4);
-          
+        
+        function drawPeople(dot) {
           console.log(dot.datum());
           textbox.html(''); 
           textbox.append("text").text(dot.datum()[0])
                  .attr("x", 0).attr("y", 10);
 
-          let deaths = dot.datum()[1];
+           let deaths = dot.datum()[1];
 
-          let numDeaths = deaths.length;
+           let numDeaths = deaths.length;
 
-          let numRows = Math.floor(numDeaths / 10);
+           let numRows = Math.floor(numDeaths / 10);
 
           sidebar.attr("height", (numRows * 28) + 100)
 
           console.log("height: "+((numRows * 28) + 100))
 
-          let xpos = 18;
-          let ypos = 50;
+           let xpos = 18;
+           let ypos = 50;
 
           deaths.forEach(d => {
             d.xposition = xpos;
@@ -277,11 +266,36 @@
                           .attr("y", d => d.yposition)
                           .attr("width", 20)
                           .attr("height", 20);
-                          
-          let lastMan;
+        }
 
+        d3.select("div.filters").append("span").attr("class", "description").attr("id", "description");
+        d3.select("div.filters").append("a").attr("class", "description").attr("id", "url");
+
+        function clickedCircle() {
+          document.getElementById("description").innerHTML = "";
+          document.getElementById("url").innerHTML = "";
+          info_textbox.html(''); 
+          const victimSvg = d3.select("#victims");
+          victimSvg.selectAll("image.death").remove();
+          if(lastClicked != null) {
+            lastClicked.attr("stroke-width", 0);
+          }
+
+          let dot = d3.select(this);
+
+          lastClicked = dot;
+
+          d3.select(this).attr("stroke","black")
+                         .attr("stroke-opacity", "100%")
+                         .attr("stroke-width", d => circleScale(d[1].length) / 4);
+
+          drawPeople(dot);
+                 
+          let lastMan;
           d3.selectAll("image.death").on("click", clickedDeath);
           function clickedDeath() {
+            document.getElementById("description").innerHTML = "";
+            document.getElementById("url").innerHTML = "";
             info_textbox.html(''); 
             let d = d3.select(this).datum();
             if(lastMan != null) {
@@ -296,6 +310,10 @@
             let age = `Victim's Age: ${d['Victim\'s age']}`;
             let gender = `Victim's Gender: ${d['Victim\'s gender']}`;
             let race = `Victim's Race: ${d['Victim\'s race']}`;
+            let cause = `Cause of Death: ${d["Cause of death"]}`
+            let b_desc = d["A brief description of the circumstances surrounding the death"];
+            let date = d["Date of Incident (month/day/year)"];
+            let url = d["Link to news article or photo of official document"];
 
             info_textbox.append("text").text(name)
                   .attr("x", 0).attr("y", 10);
@@ -305,7 +323,13 @@
                   .attr("x", 0).attr("y", 50);
             info_textbox.append("text").text(race)
                   .attr("x", 0).attr("y", 70);
-          }
+            info_textbox.append("text").text(cause)
+                  .attr("x", 0).attr("y", 90);
+            d3.select("span.description").text(b_desc);
+            info_textbox.append("text").text(date)
+                  .attr("x", 0).attr("y", 110);
+            d3.select("a#url").attr("href", url).append("span").text("link");
+          } 
         }
 
       }
