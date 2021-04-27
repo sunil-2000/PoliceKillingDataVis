@@ -78,7 +78,7 @@
         </div>
         <div class="filters">
           <div class = "filter" id = "filter"></div> 
-          <svg id = "victims" width = 301 height = 460 ></svg>
+          <svg id = "victims" width = 301 height = 460></svg>
           <svg id ="individuals" width = 301 height = "200" ></svg>
         </div>
         
@@ -221,6 +221,9 @@
         let deathsInCity;
 
         function clickedCircle() {
+          info_textbox.html(''); 
+          const victimSvg = d3.select("#victims");
+          victimSvg.selectAll("image.death").remove();
           if(lastClicked != null) {
             lastClicked.attr("stroke-width", 0);
           }
@@ -235,24 +238,31 @@
           
           console.log(dot.datum());
           textbox.html(''); 
-
           textbox.append("text").text(dot.datum()[0])
                  .attr("x", 0).attr("y", 10);
 
           let deaths = dot.datum()[1];
 
-          let xpos = 27;
+          let numDeaths = deaths.length;
+
+          let numRows = Math.floor(numDeaths / 10);
+
+          sidebar.attr("height", (numRows * 28) + 100)
+
+          console.log("height: "+((numRows * 28) + 100))
+
+          let xpos = 18;
           let ypos = 50;
 
           deaths.forEach(d => {
             d.xposition = xpos;
             d.yposition = ypos;
             xpos += 20;
-            xpos = xpos % 227;
+            xpos = xpos % 218;
             if(xpos === 0) {
               ypos += 30;
               ypos = ypos % 615;
-              xpos = 27;
+              xpos = 18;
             }
           })
 
