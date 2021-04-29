@@ -10,23 +10,27 @@
 
      html{
       font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
-      background-color: #B7B7B8;
+      background-color:slategray;
       color: white;
      }
 
-     svg {
-       fill: white;
-     }
-
-     .nation {
-        fill: lightgrey;
-      }
-
-    .outline {
-      stroke: #fff;
-      stroke-width: 1px;
+    .state {
+      stroke: lightgrey;
+      stroke-width: 2px;
+      fill:none; 
+    }
+    .state-outline{
       fill: none;
     }
+    .county{
+      stroke: black;
+      stroke-width: 1px;
+      fill:slategray; 
+    }
+    .county-outline{
+      fill:none;
+    }
+
 
     #master-container{
       display: flex;
@@ -35,7 +39,7 @@
     }
     .map{
       display: inline-block;
-      background-color: white;
+     
       height: 625px;
     }
     .filter{
@@ -116,10 +120,15 @@
         const map = svg.append("g");
         
         const us = await d3.json("counties-10m.json");
-        var projection = d3.geoAlbersUsa().scale(1300).translate([487.5, 305]);
-        var path = d3.geoPath().projection(projection);
-        var nation = topojson.feature(us, us.objects.nation);
-        var statesMesh = topojson.mesh(us, us.objects.states);
+        
+        
+        const states = topojson.feature(us, us.objects.states);
+        const statesMesh = topojson.mesh(us, us.objects.states);
+        const counties = topojson.feature(us, us.objects.counties);
+        const countiesMesh = topojson.mesh(us, us.objects.counties);
+        const projection = d3.geoAlbersUsa().fitSize([width, height], states);
+        const path = d3.geoPath().projection(projection);
+        let viewport = svg.append("g");
         
         
         data.forEach( d => {
@@ -147,17 +156,34 @@
         let circleExtent = d3.extent(new_groups, d => d[1].length)
         let circleScale = d3.scaleLinear().domain(circleExtent).range([1, 15]);
 
-        map.selectAll("path.nation").data(nation.features)
-         .join("path")
-         .attr("class", "nation")
+        
+
+
+     viewport.append("path")
+          .datum(countiesMesh)
+          .attr("class","county-outline")
+          .attr("opacity", 0)
+          .attr("d", path);   
+
+    viewport.selectAll("path.county").data(counties.features)
+          .join("path")
+         .attr("class", "county")
+         .attr("opacity", 0)
          .attr("d", path);
+        
+
+
+    viewport.append("path").datum(statesMesh)
+            .attr("class","state-outline")
+            .attr("d", path);
+    viewport.selectAll("path.state").data(states.features)
+            .join("path")
+            .attr("class", "state")
+            .attr("d", path);
   
-        map.append("path").datum(statesMesh)
-         .attr("class","outline")
-         .attr("d", path);
 
         function drawCircs(){
-            map.selectAll("circle.dot").data(new_groups)
+            viewport.selectAll("circle.dot").data(new_groups)
                     .join("circle")
                     .attr("class","dot")
                     .attr("r", d => circleScale(d[1].length))
@@ -168,16 +194,35 @@
                     .attr("data", d => d[1].length);
         }
         drawCircs(); 
-        var zoom = d3.zoom()
-                    .scaleExtent([1, Infinity])
-                    .translateExtent([[0, 0], [width, height]])
-                    .extent([[0, 0], [width, height]])
-                    .on('zoom', function(event) {
-                        svg.selectAll('path').attr('transform', event.transform)
-                        map.selectAll('circle').attr('transform', event.transform);
-                });
-        svg.call(zoom);
+
+        // ZOOM 
         
+        
+        var zoom = d3.zoom()
+                    .scaleExtent([1, 10])
+                    .translateExtent([[0, 0], [width, height]])
+                    .on('zoom', zoomed)
+                    .on('end', function({transform}){
+                      viewport.selectAll(".county")
+                              .transition()
+                              .duration(2000)
+                              .attr("opacity", (transform.k > 3) ? 1 : 0);
+                    });
+
+        svg.call(zoom);
+        svg.call(zoom.transform, d3.zoomIdentity);
+
+        function zoomed({transform}){
+          viewport.attr("transform", transform.toString() );
+          viewport.selectAll(".state")
+                  .style("stroke-width", 2 / transform.k);
+          if (transform.k > 3){
+            viewport.selectAll(".county")
+                    .style("stroke-width", 1 / transform.k);
+          }
+        }
+       
+
       let slider = d3
         .sliderBottom()
         .min(circleExtent[0])
@@ -190,11 +235,11 @@
           let truncated = val.map(d => Math.floor(d));
           d3.select('span#value').text(truncated.join(' to ') + " deaths");
           updateSlide(truncated);
-          console.log("done");
+
         });
       
       function updateSlide(v){
-        console.log(v)
+
         d3.selectAll("circle.dot").each( function () {
               let circle = d3.select(this);
               let data = circle.attr("data")
@@ -246,7 +291,6 @@
         let deathsInCity;
         
         function drawPeople(dot) {
-          console.log(dot.datum());
           textbox.html(''); 
           textbox.append("text").text(dot.datum()[0])
                  .attr("x", 0).attr("y", 10);
@@ -259,7 +303,7 @@
 
           sidebar.attr("height", (numRows * 28) + 100)
 
-          console.log("height: "+((numRows * 28) + 100))
+
 
            let xpos = 18;
            let ypos = 50;
@@ -326,7 +370,7 @@
             lastMan = d3.select(this);
 
             d3.select(this).attr("xlink:href", "red-man-standing.svg")
-            console.log(d);
+
             let name = `Victim's Name: ${d['Victim\'s name']}`;
             let age = `Victim's Age: ${d['Victim\'s age']}`;
             let gender = `Victim's Gender: ${d['Victim\'s gender']}`;
