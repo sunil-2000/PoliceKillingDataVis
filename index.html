@@ -3,6 +3,8 @@
     <title>INFO 3300 Project 2</title>
     <script src="https://d3js.org/d3.v6.min.js"></script>
     <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <script src="https://unpkg.com/d3-simple-slider"></script>
+
   </head>
   <style>
 
@@ -47,17 +49,21 @@
       flex-direction: column;
       width: 100%;
     }
-    #slider{
+    #slider, #slider-range{
       width: 100%;
-      margin: 30px;
+      margin: 15px;
+      margin-bottom: 0px;
+      margin-top: 0px;
     }
-    #slide-label{
-      margin: 30px;
+    #slide-label, #value-range{
+      margin-top: 0px;
+      margin: 25px;
+      margin-bottom: 0px;
     }
     .side{
       display: flex;
       flex-direction: column;
-      width: 100%;
+      width: 60%;
     }
     #victims, #individuals{
       margin: 30px;
@@ -70,7 +76,7 @@
     }
     .description{
       margin-left: 50px;
-      margin-right: 50px;
+      margin-right: 200px;
       margin-bottom: 10px;
     }
 
@@ -87,7 +93,10 @@
           </div>
         </div>
         <div class="filters">
-          <div class = "filter" id = "filter"></div> 
+          <div class = "filter">
+            <div><span id="value">1 to 133 deaths</span></div>
+            <div><div id="slider"></div></div>
+          </div>
           <svg id = "victims" width = 301 height = 460></svg>
           <svg id ="individuals" width = 301 height = "145" ></svg>
         </div>
@@ -95,9 +104,10 @@
     
     
     <script>
+      
       const getData = async function(){
         // data set from https://mappingpoliceviolence.org/ 
-        let data = await d3.csv("police_cleaned.csv");
+        let data = await d3.csv("police_revised.csv");
         
         // mesh / outline dataset from INFO 3300 repository <-- Jeff Rzeszotarski
         const svg = d3.select("#deathsmap");
@@ -116,8 +126,11 @@
           let comma = d.coordinates.indexOf(",");
           d.latitude = Number(d.coordinates.substring(1, comma));
           d.longitude = Number(d.coordinates.substring(comma + 1, d.coordinates.length - 1));
-          if (d.City === "Indianapolis"){ // indianapolis falsely classified by geocoder 
-            d.position = projection ([-86.1583502, 39.7683331])
+          if (d.City === "Columbus"){ // Columbuss falsely classified by geocoder 
+            d.position = projection ([-82.9988, 39.9612]);
+          }
+          else if (d.City === "Austin"){
+            d.position = projection([-97.7431, 30.2672]);
           }else{
             d.position = projection( [d.longitude, d.latitude] );
           }
@@ -154,7 +167,7 @@
                     .attr("cy", d => d[1][0].position[1])
                     .attr("data", d => d[1].length);
         }
-
+        drawCircs(); 
         var zoom = d3.zoom()
                     .scaleExtent([1, Infinity])
                     .translateExtent([[0, 0], [width, height]])
@@ -165,40 +178,48 @@
                 });
         svg.call(zoom);
         
+      let slider = d3
+        .sliderBottom()
+        .min(circleExtent[0])
+        .max(circleExtent[1])
+        .width(300)
+        .ticks(5)
+        .default([1, 133])
+        .fill('#2196f3')
+        .on('onchange', val => {
+          let truncated = val.map(d => Math.floor(d));
+          d3.select('span#value').text(truncated.join(' to ') + " deaths");
+          updateSlide(truncated);
+          console.log("done");
+        });
+      
+      function updateSlide(v){
+        console.log(v)
+        d3.selectAll("circle.dot").each( function () {
+              let circle = d3.select(this);
+              let data = circle.attr("data")
+              if (Number(data) > v[0] && Number(data) < v[1]){
+                circle.attr("visibility", "");
+              }else{
+                circle.attr("visibility", "hidden");
+              }
+            }) 
+      }
+      let range = d3
+        .select('div#slider')
+        .append('svg')
+        .attr('width', 500)
+        .attr('height', 100)
+        .append('g')
+        .attr('transform', 'translate(30,30)')
+        .call(slider);
 
-        d3.select("div#filter").append("span").attr("id", "slide-label").text("More than 1 killing")
-        d3.select("div#filter").append("input")
-                                .attr("type", "range")
-                                .attr("value", 1)
-                                .attr("min",(circleExtent[0]))
-                                .attr("max", (circleExtent[1]))
-                                .attr("id", "slider")
-                                .attr("width", "400px")
-                                .attr("steps", 1)
-                                .on("input", function(){
-                                  updateSlide(this.value)
-                                });
+
+
+
                                 
-        drawCircs();    
-        function updateSlide(v){
-          //d3.select("#slider").property("value", v);
-          let lastWord = " killings";
-          if (v === "1"){
-            lastWord = " killing"
-          }
+          
 
-          d3.select("#slide-label").text("More than " + v + lastWord);
-   
-          d3.selectAll("circle.dot").each( function () {
-            let circle = d3.select(this);
-            let data = circle.attr("data")
-            if (Number(data) < Number(v)){
-              circle.attr("visibility", "hidden");
-            }else{
-              circle.attr("visibility", "");
-            }
-          }) 
-        }
 
         d3.selectAll("circle.dot").on("click", clickedCircle);
         
