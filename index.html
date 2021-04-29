@@ -205,7 +205,7 @@
                     .on('end', function({transform}){
                       viewport.selectAll(".county")
                               .transition()
-                              .duration(2000)
+                              .duration(250)
                               .attr("opacity", (transform.k > 3) ? 1 : 0);
                     });
 
@@ -216,6 +216,7 @@
           viewport.attr("transform", transform.toString() );
           viewport.selectAll(".state")
                   .style("stroke-width", 2 / transform.k);
+
           if (transform.k > 3){
             viewport.selectAll(".county")
                     .style("stroke-width", 1 / transform.k);
