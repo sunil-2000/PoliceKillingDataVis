@@ -11,7 +11,7 @@
      html{
       font-family:'Trebuchet MS', 'Lucida Sans Unicode', 'Lucida Grande', 'Lucida Sans', Arial, sans-serif;
       background-color:slategray;
-      color: white;
+      color: black;
      }
 
     .state {
@@ -43,66 +43,117 @@
       height: 625px;
     }
     .filter{
-      width: 75%;
+      width: 250px;
       margin: 20px;
       margin-bottom: 0px;
       display:inline-block
     }
+
     .filters{
       display:flex;
       flex-direction: column;
       width: 100%;
     }
     #slider, #slider-range{
-      width: 100%;
-      margin: 15px;
-      margin-bottom: 0px;
-      margin-top: 0px;
+      width: 75%;
+      margin: 0px;
     }
     #slide-label, #value-range{
-      margin-top: 0px;
-      margin: 25px;
-      margin-bottom: 0px;
+      margin: 30px;
     }
     .side{
       display: flex;
       flex-direction: column;
-      width: 60%;
+      width: 100%;
     }
     #victims, #individuals{
       margin: 30px;
       display: flex;
       margin-top: 0px;
       margin-bottom: 0px;
+      padding-top: 15px;
+      padding-bottom: 15px;
     }
-    .INFO{
+
+    #individuals {
+      margin-left: 0px;
+      padding-bottom: 0px;
+    }
+
+    .description{
+      padding: 20px;
+    }
+
+    .card {
+      border-radius: 15px;
+      background-color: lightgrey;
+      width: 301px;
+      margin-left: 30px;
+      margin-bottom: 10px;
+    }
+
+    #card2, #card3 {
+      background-color: slategray;
+    }
+
+    #card1 {
+      width: 365px;
+    }
+
+    #title {
+      text-align: center;
+    }
+
+    #card-info {
+      width: 500px;
+      padding: 15px;
       margin-top: 20px;
     }
-    .description{
-      margin-left: 50px;
-      margin-right: 200px;
-      margin-bottom: 10px;
+
+    .info-wrapper {
+      width: 975px;
+      display: flex;
+      justify-content: center;
+    }
+
+    #card4 {
+      background-color: slategray;
     }
 
   </style>
   <body>
-
+    <div id="title-box">
+      <h1 id="title">Police Encounters</h1>
+    </div>
     <div id = "master-container">
         <div class="map">
-          <svg class = "child" id = "deathsmap" width = 975 height = 610 ></svg>
-          <div class = "INFO">
-            Navigate the map by scrolling to zoom and dragging the cursor to move. Click on a point that 
-              represents a city or town to view the number of killings. Then, click on a specific killing 
-              to get more information about the person.
+          <svg class = "child" id = "deathsmap" width = 975 height = 625 ></svg>
+          <div class="info-wrapper">
+            <div id="card-info" class="card">
+              <div class = "INFO">
+                Navigate the map by scrolling to zoom and dragging the cursor to move. Click on a point that 
+                  represents a city or town to view the number of killings. Then, click on a specific killing 
+                  to get more information about the person.
+              </div>
+            </div>
           </div>
         </div>
         <div class="filters">
-          <div class = "filter">
-            <div><span id="value">1 to 133 deaths</span></div>
+          <div id = "card1" class = "card">
+            <div class = "filter">
+              <div><span id="value">1 to 133 deaths</span></div>
+            </div>
             <div><div id="slider"></div></div>
           </div>
-          <svg id = "victims" width = 301 height = 460></svg>
-          <svg id ="individuals" width = 301 height = "145" ></svg>
+          <div id = "card2" class = "card">
+            <svg id = "victims" width = 301 height = 460></svg>
+          </div>
+          <div id = "card3" class="card">
+            <svg id ="individuals" width = 301 height = "145" ></svg>
+          </div>
+          <div id= "card4" class="card desc">
+            
+          </div>
         </div>
     </div>
     
@@ -205,7 +256,7 @@
                     .on('end', function({transform}){
                       viewport.selectAll(".county")
                               .transition()
-                              .duration(2000)
+                              .duration(250)
                               .attr("opacity", (transform.k > 3) ? 1 : 0);
                     });
 
@@ -253,7 +304,7 @@
       let range = d3
         .select('div#slider')
         .append('svg')
-        .attr('width', 500)
+        .attr('width', 350)
         .attr('height', 100)
         .append('g')
         .attr('transform', 'translate(30,30)')
@@ -333,12 +384,15 @@
                           .attr("height", 20);
         }
 
-        d3.select("div.filters").append("span").attr("class", "description").attr("id", "description");
-        d3.select("div.filters").append("a").attr("class", "description").attr("id", "url");
+        d3.select("div.desc").append("div").attr("class", "description").attr("id", "description");
+        d3.select("div.desc").append("a").attr("class", "description").attr("id", "url").attr("target", "_blank");
 
         function clickedCircle() {
           document.getElementById("description").innerHTML = "";
           document.getElementById("url").innerHTML = "";
+          document.getElementById("card2").style.backgroundColor = "lightgrey";
+          document.getElementById("card3").style.backgroundColor = "slategray";
+          document.getElementById("card4").style.backgroundColor = "slategray";
           info_textbox.html(''); 
           const victimSvg = d3.select("#victims");
           victimSvg.selectAll("image.death").remove();
@@ -361,6 +415,9 @@
           function clickedDeath() {
             document.getElementById("description").innerHTML = "";
             document.getElementById("url").innerHTML = "";
+            document.getElementById("card3").style.backgroundColor = "lightgrey";
+            document.getElementById("card4").style.backgroundColor = "lightgrey";
+            d3.select("#card2").attr("background-color", "lightgrey");
             info_textbox.html(''); 
             let d = d3.select(this).datum();
             if(lastMan != null) {
@@ -390,10 +447,10 @@
                   .attr("x", 0).attr("y", 70);
             info_textbox.append("text").text(cause)
                   .attr("x", 0).attr("y", 90);
-            d3.select("span.description").text(b_desc);
+            d3.select("div.description").text("Desciption: "+b_desc);
             info_textbox.append("text").text(date)
                   .attr("x", 0).attr("y", 110);
-            d3.select("a#url").attr("href", url).append("span").text("link");
+            d3.select("a#url").attr("href", url).append("span").text("More Info");
           } 
         }
 
