@@ -295,24 +295,22 @@
             .on("click", function () {
               let p  =  map.selectAll("path.state-back");
               console.log(p.style("fill"));
-              if (p.style("fill") === "none"){
-                p.style("fill", d => { 
-                      return colorScale( stateCounts[ idToState[Number(d.id)] ]) 
-                    });
+              if (p.style("fill") === "slategrey" || p.style("fill") === "rgb(112, 128, 144)"){
+                p.transition().style("fill", function(d,i) {
+                      return colorScale( stateCounts[ idToState[Number(d.id)] ])
+                    }).duration(1000);
                 d3.select("button.police-death")
                   .transition()
                   .duration(1000)
-                  .style("background-color", "#2196f3")
+                  .style("background-color", "#2196F3")
                   .style("color", "#fff")
-                    
               } else{
-                p.style("fill", "none")
+                p.transition().style("fill", "slategrey").duration(1000);
                 d3.select("button.police-death")
                   .transition()
                   .duration(1000)
                   .style("background-color", "lightgrey")
                   .style("color", "black")
-
               }
             })
 
