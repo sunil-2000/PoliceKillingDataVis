@@ -44,6 +44,7 @@
     .filter{
       width: 250px;
       margin: 20px;
+      margin-top: 7px;
       margin-bottom: 0px;
       display:inline-block
     }
@@ -132,6 +133,14 @@
       background-color: slategray;
     }
 
+    #instructions-card-1, #instructions-card-2 {
+      text-align: center;
+      height: 50px;
+    }
+
+    #instructions-card-2 {
+      visibility: hidden;
+    }
   </style>
   <body>
     <div id="title-box">
@@ -150,8 +159,18 @@
           </div>
         </div>
         <div class="filters">
+          <div id = "instructions-card-1" class = "card">
+            <p>           
+              Click a circle
+            </p>
+          </div>
           <div id = "card2" class = "card">
             <svg id = "victims" width = 301 height = 460></svg>
+          </div>
+          <div id = "instructions-card-2" class = "card">
+            <p>           
+              Select a person
+            </p>
           </div>
           <div id = "card3" class="card">
             <svg id ="individuals" width = 301 height = "145" ></svg>
@@ -389,7 +408,7 @@
         .select('div#slider')
         .append('svg')
         .attr('width', 350)
-        .attr('height', 100)
+        .attr('height', 70)
         .append('g')
         .attr('transform', 'translate(30,30)')
         .call(slider);
@@ -477,6 +496,10 @@
           document.getElementById("card2").style.backgroundColor = "lightgrey";
           document.getElementById("card3").style.backgroundColor = "slategray";
           document.getElementById("card4").style.backgroundColor = "slategray";
+          if(d3.select("#instructions-card-1") != null)
+            d3.select("#instructions-card-1").remove();
+          if(document.getElementById("instructions-card-2") != null)
+            document.getElementById("instructions-card-2").style.visibility = "visible";
           info_textbox.html(''); 
           const victimSvg = d3.select("#victims");
           victimSvg.selectAll("image.death").remove();
@@ -502,6 +525,8 @@
             document.getElementById("card3").style.backgroundColor = "lightgrey";
             document.getElementById("card4").style.backgroundColor = "lightgrey";
             d3.select("#card2").attr("background-color", "lightgrey");
+            if(d3.select("#instructions-card-2") != null)
+              d3.select("#instructions-card-2").remove();
             info_textbox.html(''); 
             let d = d3.select(this).datum();
             if(lastMan != null) {
