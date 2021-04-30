@@ -15,7 +15,7 @@
      }
 
     .state {
-      stroke: lightgrey;
+       stroke: lightgrey;
       stroke-width: 2px;
       fill:none; 
     }
@@ -25,7 +25,7 @@
     .county{
       stroke: black;
       stroke-width: 1px;
-      fill:slategray; 
+      /* fill: none;  */
     }
     .county-outline{
       fill:none;
@@ -39,7 +39,6 @@
     }
     .map{
       display: inline-block;
-     
       height: 625px;
     }
     .filter{
@@ -113,7 +112,19 @@
     .info-wrapper {
       width: 975px;
       display: flex;
-      justify-content: center;
+      justify-content: left;
+    }
+
+    .police-death{
+      width: 100px;
+      height: 100px;
+      padding: 5px;
+      margin: 10px;
+      margin-top: 20px;
+      border: none;
+      border-radius: 15px;
+      text-align: center;
+
     }
 
     #card4 {
@@ -127,7 +138,7 @@
     </div>
     <div id = "master-container">
         <div class="map">
-          <svg class = "child" id = "deathsmap" width = 975 height = 625 ></svg>
+          <svg class = "child" id = "deathsmap" width = 975 height = 500 ></svg>
           <div class="info-wrapper">
             <div id="card-info" class="card">
               <div class = "INFO">
@@ -171,7 +182,7 @@
         const map = svg.append("g");
         
         const us = await d3.json("counties-10m.json");
-        
+        const stateIDs = await d3.tsv("us-state-names.tsv");
         
         const states = topojson.feature(us, us.objects.states);
         const statesMesh = topojson.mesh(us, us.objects.states);
@@ -179,6 +190,7 @@
         const countiesMesh = topojson.mesh(us, us.objects.counties);
         const projection = d3.geoAlbersUsa().fitSize([width, height], states);
         const path = d3.geoPath().projection(projection);
+        
         let viewport = svg.append("g");
         
         
@@ -211,31 +223,104 @@
         let circleExtent = d3.extent(new_groups, d => d[1].length)
         let circleScale = d3.scaleLinear().domain(circleExtent).range([1, 15]);
 
+        // Police Data
+
+        let policeData = await d3.csv("police_deaths_cleaned.csv");
+        policeData.forEach( d => {
+          d.state = d.state.trim();
+        })
+        let policeGroups = d3.group(policeData, d => d.state);
+        let new_police_groups = Array.from(policeGroups);
+        console.log(new_police_groups);
         
+        let idToState = {}
+        let stateCounts = {};
 
-
-     viewport.append("path")
-          .datum(countiesMesh)
-          .attr("class","county-outline")
-          .attr("opacity", 0)
-          .attr("d", path);   
-
-    viewport.selectAll("path.county").data(counties.features)
-          .join("path")
-         .attr("class", "county")
-         .attr("opacity", 0)
-         .attr("d", path);
+        stateIDs.forEach( row => {
+          idToState[row.id] = row.code;
+          stateCounts[row.code] = 0;
+        });
         
+        for(let i = 1; i <= 78; i++) {
+          let stateID = idToState[i];
+          if(stateID != undefined) {
+            let num = policeGroups.get(stateID);
+            if(num != undefined) {
+              stateCounts[stateID] = num.length;
+            }
+          }
+          else {
+            //console.log(i);
+          }
+        }
 
-
+        const colorScale = d3.scaleQuantile()
+                         .domain(Object.values(stateCounts))
+                         .range(["#fff","#bcd3f7","#85b0f2","#528eeb","#1962d4"]);
     viewport.append("path").datum(statesMesh)
             .attr("class","state-outline")
             .attr("d", path);
-    viewport.selectAll("path.state").data(states.features)
+    viewport.selectAll("path.state")
+            .style("fill", d => { 
+              return colorScale( stateCounts[ idToState[Number(d.id)] ]) 
+            });
+
+     map.append("path")
+          .datum(countiesMesh)
+          .attr("class","county-outline")
+          .attr("opacity", 0)
+          .attr("fill", 'transparent')
+          .attr("d", path);   
+    
+
+      viewport.selectAll("path.county").data(counties.features)
+          .join("path")
+         .attr("class", "county")
+         .attr("opacity", 0)
+         .attr("fill", 'transparent')
+         .attr("d", path);
+
+         viewport.selectAll("path.state").data(states.features)
             .join("path")
             .attr("class", "state")
             .attr("d", path);
-  
+        map.selectAll("path.state-back").data(states.features)
+            .join("path")
+            .attr("class", "state-back")
+            .attr("d", path)
+            .attr("stroke", "none")
+            .style("fill", "none")
+        
+        // police death button 
+        console.log(d3.select("div#info-wrapper"));
+        d3.select("div.info-wrapper")
+            .append("button")
+            .attr("class", "police-death")
+            .text("Police Deaths")
+            .style("background-color", "lightgrey")
+            .on("click", function () {
+              let p  =  map.selectAll("path.state-back");
+              console.log(p.style("fill"));
+              if (p.style("fill") === "none"){
+                p.style("fill", d => { 
+                      return colorScale( stateCounts[ idToState[Number(d.id)] ]) 
+                    });
+                d3.select("button.police-death")
+                  .transition()
+                  .duration(1000)
+                  .style("background-color", "#2196f3")
+                  .style("color", "#fff")
+                    
+              } else{
+                p.style("fill", "none")
+                d3.select("button.police-death")
+                  .transition()
+                  .duration(1000)
+                  .style("background-color", "lightgrey")
+                  .style("color", "black")
+
+              }
+            })
 
         function drawCircs(){
             viewport.selectAll("circle.dot").data(new_groups)
@@ -258,7 +343,7 @@
                     .translateExtent([[0, 0], [width, height]])
                     .on('zoom', zoomed)
                     .on('end', function({transform}){
-                      viewport.selectAll(".county")
+                      viewport.selectAll("path.county")
                               .transition()
                               .duration(250)
                               .attr("opacity", (transform.k > 3) ? 1 : 0);
@@ -269,6 +354,7 @@
 
         function zoomed({transform}){
           viewport.attr("transform", transform.toString() );
+          map.attr("transform", transform.toString() );
           viewport.selectAll(".state")
                   .style("stroke-width", 2 / transform.k);
 
