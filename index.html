@@ -283,7 +283,7 @@
             .attr("class", "state-back")
             .attr("d", path)
             .attr("stroke", "none")
-            .style("fill", "none")
+            .style("fill", "slategrey")
         
         // police death button 
         console.log(d3.select("div#info-wrapper"));
@@ -366,6 +366,7 @@
         .default([1, 133])
         .fill('#2196f3')
         .on('onchange', val => {
+          console.log(val);
           let truncated = val.map(d => Math.floor(d));
           d3.select('span#value').text(truncated.join(' to ') + " deaths");
           updateSlide(truncated);
@@ -377,7 +378,7 @@
         d3.selectAll("circle.dot").each( function () {
               let circle = d3.select(this);
               let data = circle.attr("data")
-              if (Number(data) > v[0] && Number(data) < v[1]){
+              if (Number(data) >= v[0] && Number(data) <= v[1]){
                 circle.attr("visibility", "");
               }else{
                 circle.attr("visibility", "hidden");
