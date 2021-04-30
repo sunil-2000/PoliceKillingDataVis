@@ -133,7 +133,7 @@
               <div class = "INFO">
                 Navigate the map by scrolling to zoom and dragging the cursor to move. Click on a point that 
                   represents a city or town to view the number of killings. Then, click on a specific killing 
-                  to get more information about the person.
+                  to get more information about the encounter.
               </div>
             </div>
           </div>
@@ -191,7 +191,11 @@
           }
           else if (d.City === "Austin"){
             d.position = projection([-97.7431, 30.2672]);
-          }else{
+          }
+          else if (d.City === "San Jose"){
+            d.position = projection([-121.8863, 37.3382]);
+          }
+          else{
             d.position = projection( [d.longitude, d.latitude] );
           }
         })
@@ -267,6 +271,7 @@
           viewport.attr("transform", transform.toString() );
           viewport.selectAll(".state")
                   .style("stroke-width", 2 / transform.k);
+
           if (transform.k > 3){
             viewport.selectAll(".county")
                     .style("stroke-width", 1 / transform.k);
