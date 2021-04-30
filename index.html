@@ -102,6 +102,10 @@
 
     #title {
       text-align: center;
+      border-radius: 15px;
+      background-color: lightgrey;
+      width: 400px;
+      padding-top: 10px;
     }
 
     #card-info {
@@ -118,6 +122,12 @@
 
     #card4 {
       background-color: slategray;
+    }
+
+    #title-box {
+      display: flex;
+      justify-content: center;
+      height: 100px;
     }
 
   </style>
@@ -171,7 +181,55 @@
         const map = svg.append("g");
         
         const us = await d3.json("counties-10m.json");
+
+        let policeData = await d3.csv("police_deaths_cleaned.csv");
+
+
+        const stateIDs = await d3.tsv("us-state-names.tsv");
+
+        policeData.forEach( d => {
+          d.state = d.state.trim();
+        })
+
+
+        //policeData = policeData.filter(d => d.state !== "GU" && d.state !== "TR" && d.state !== "RR" && d.state !== "PR" && d.state !== "AS" && d.state !== "VI" && d.state !== "US" && d.state !== "DC");
+
+
+        let policeGroups = d3.group(policeData, d => d.state);
         
+        let new_police_groups = Array.from(policeGroups);
+
+        let policeExtent = d3.extent(new_police_groups, d => d[1].length);
+
+        let idToState = {}
+        let stateCounts = {};
+
+        stateIDs.forEach( row => {
+          idToState[row.id] = row.code;
+          stateCounts[row.code] = 0;
+        });
+
+        for(let i = 1; i <= 78; i++) {
+          let stateID = idToState[i];
+          if(stateID != undefined) {
+            let num = policeGroups.get(stateID);
+            if(num != undefined) {
+              stateCounts[stateID] = num.length;
+            }
+          }
+          else {
+            console.log(i);
+          }
+        }
+        console.log(idToState[6]);
+        console.log(idToState);
+        console.log(stateIDs);
+
+        const colorScale = d3.scaleQuantile()
+                         .domain(Object.values(stateCounts))
+                         .range(["#fff","#bcd3f7","#85b0f2","#528eeb","#1962d4"]);
+
+       
         
         const states = topojson.feature(us, us.objects.states);
         const statesMesh = topojson.mesh(us, us.objects.states);
@@ -218,24 +276,37 @@
           .datum(countiesMesh)
           .attr("class","county-outline")
           .attr("opacity", 0)
-          .attr("d", path);   
+          .attr("d", path)
+          .attr("fill", "none"); 
+
+    viewport.selectAll("path.state").data(states.features)
+            .join("path")
+            .attr("class", "state")
+            .attr("note", d => d.id)
+            .attr("d", path)
+            .attr("fill", "none");
+
+
 
     viewport.selectAll("path.county").data(counties.features)
           .join("path")
          .attr("class", "county")
          .attr("opacity", 0)
-         .attr("d", path);
-        
-
+         .attr("d", path)
+         .attr("fill", "none");
 
     viewport.append("path").datum(statesMesh)
             .attr("class","state-outline")
-            .attr("d", path);
-    viewport.selectAll("path.state").data(states.features)
-            .join("path")
-            .attr("class", "state")
-            .attr("d", path);
-  
+            .attr("d", path)
+            .attr("fill", "none");
+
+    viewport.selectAll(".state")
+            .style("fill", d => { 
+              return colorScale( stateCounts[ idToState[Number(d.id)] ]) 
+            });
+
+    console.log(states.features);
+
 
         function drawCircs(){
             viewport.selectAll("circle.dot").data(new_groups)
@@ -314,12 +385,6 @@
         .append('g')
         .attr('transform', 'translate(30,30)')
         .call(slider);
-
-
-
-
-                                
-          
 
 
         d3.selectAll("circle.dot").on("click", clickedCircle);
