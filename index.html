@@ -97,6 +97,7 @@
 
     #card1 {
       width: 365px;
+      margin-top: 20px;
     }
 
     #title {
@@ -140,22 +141,15 @@
         <div class="map">
           <svg class = "child" id = "deathsmap" width = 975 height = 500 ></svg>
           <div class="info-wrapper">
-            <div id="card-info" class="card">
-              <div class = "INFO">
-                Navigate the map by scrolling to zoom and dragging the cursor to move. Click on a point that 
-                  represents a city or town to view the number of killings. Then, click on a specific killing 
-                  to get more information about the encounter.
+            <div id = "card1" class = "card">
+              <div class = "filter">
+                <div><span id="value">1 to 133 deaths</span></div>
               </div>
+              <div><div id="slider"></div></div>
             </div>
           </div>
         </div>
         <div class="filters">
-          <div id = "card1" class = "card">
-            <div class = "filter">
-              <div><span id="value">1 to 133 deaths</span></div>
-            </div>
-            <div><div id="slider"></div></div>
-          </div>
           <div id = "card2" class = "card">
             <svg id = "victims" width = 301 height = 460></svg>
           </div>
