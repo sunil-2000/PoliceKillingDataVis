@@ -13,9 +13,9 @@
       background-color:slategray;
       color: black;
      }
-
+     
     .state {
-       stroke: lightgrey;
+      stroke: lightgrey;
       stroke-width: 2px;
       fill:none; 
     }
@@ -30,7 +30,6 @@
     .county-outline{
       fill:none;
     }
-
 
     #master-container{
       display: flex;
@@ -135,16 +134,24 @@
 
     #instructions-card-1, #instructions-card-2 {
       text-align: center;
-      height: 50px;
+      height: 70px;
     }
 
     #instructions-card-2 {
       visibility: hidden;
+      height: 50px;
     }
+    
+    #deaths-label {
+      text-align: center;
+      margin: 0;
+      font-size: 10px;
+    }
+
   </style>
   <body>
     <div id="title-box">
-      <h1 id="title">Police Encounters</h1>
+      <h1 id="title">Fatal Police Encounters</h1>
     </div>
     <div id = "master-container">
         <div class="map">
@@ -160,14 +167,15 @@
 
             </div>
             <div id="legend">
-              <svg id="colorLegend" height="100" width="400" style="background: slategray; margin-top: 30px"></svg>
+              <svg id="colorLegend" height="85" width="400" style="background: slategray; margin-top: 30px"></svg>
+              <p id="deaths-label">Police Deaths</p>
             </div>
           </div>
         </div>
         <div class="filters">
           <div id = "instructions-card-1" class = "card">
             <p>           
-              Click a circle
+              Toggle the police deaths button on/off, zoom and pan the map, and click a city.
             </p>
           </div>
           <div id = "card2" class = "card">
@@ -181,28 +189,28 @@
           <div id = "card3" class="card">
             <svg id ="individuals" width = 301 height = "145" ></svg>
           </div>
-          <div id= "card4" class="card desc">
-            
+          <div id= "card4" class="card desc">    
           </div>
         </div>
     </div>
-
-    
-    
     <script>
       
       const getData = async function(){
         // data set from https://mappingpoliceviolence.org/ 
         let data = await d3.csv("police_revised.csv");
+        // data set from https://github.com/fivethirtyeight/data/tree/master/police-deaths
+        const policeData = await d3.csv("police_deaths_cleaned.csv");
         
         // mesh / outline dataset from INFO 3300 repository <-- Jeff Rzeszotarski
         const svg = d3.select("#deathsmap");
         const width = svg.attr("width");
         const height = svg.attr("height");
-        const map = svg.append("g");
+        const map = svg.append("g"); // map used for chloropleth that acts as background of map (allows on/off functionality)
+        const viewport = svg.append("g");
         
         const us = await d3.json("counties-10m.json");
         const stateIDs = await d3.tsv("us-state-names.tsv");
+        
         
         const states = topojson.feature(us, us.objects.states);
         const statesMesh = topojson.mesh(us, us.objects.states);
@@ -211,14 +219,14 @@
         const projection = d3.geoAlbersUsa().fitSize([width, height], states);
         const path = d3.geoPath().projection(projection);
         
-        let viewport = svg.append("g");
-        
-        
+        // data processing of police_revised.csv (getting the coordinate positions from string)
+        // we noticed some cities like Columbus, Austin, San Jose were falsely classified by
+        // geocoder, so we hardcoded the coordinates
         data.forEach( d => {
           let comma = d.coordinates.indexOf(",");
           d.latitude = Number(d.coordinates.substring(1, comma));
           d.longitude = Number(d.coordinates.substring(comma + 1, d.coordinates.length - 1));
-          if (d.City === "Columbus"){ // Columbuss falsely classified by geocoder 
+          if (d.City === "Columbus"){  
             d.position = projection ([-82.9988, 39.9612]);
           }
           else if (d.City === "Austin"){
@@ -237,22 +245,17 @@
         });
 
         let groups = d3.group(data, d => d.City);
-
         let new_groups = Array.from(groups);
-
         let circleExtent = d3.extent(new_groups, d => d[1].length)
         let circleScale = d3.scaleLinear().domain(circleExtent).range([1, 15]);
 
-        // Police Data
-
-        let policeData = await d3.csv("police_deaths_cleaned.csv");
+        // police_deaths_clean.csv data processing 
         policeData.forEach( d => {
           d.state = d.state.trim();
         })
+
         let policeGroups = d3.group(policeData, d => d.state);
         let new_police_groups = Array.from(policeGroups);
-        console.log(new_police_groups);
-        
         let idToState = {}
         let stateCounts = {};
 
@@ -273,38 +276,31 @@
             //console.log(i);
           }
         }
-
+        // color scale for chloropleth 
         const colorScale = d3.scaleQuantile()
-                         .domain(Object.values(stateCounts))
-                         .range(["#fff","#bcd3f7","#85b0f2","#528eeb","#1962d4"]);
+                              .domain(Object.values(stateCounts))
+                              .range(["#fff","#bcd3f7","#85b0f2","#528eeb","#1962d4"]);
 
         drawLegend(d3.select("#colorLegend"), colorScale);
 
-            // Function needs a d3 selected SVG canvas where it will draw the legend and a source color scale
-        function drawLegend(legend, legendColorScale) {
-          
-          // Bonus code here to draw an adaptive gradient legend so we can see different color scales for choropleth maps
-          //  Credit Prof. Rz if you are basing a legend on this structure, and note SERIOUS PERFORMANCE CONSIDERATIONS
-          
+        //  Credit Prof. Rz for creating this function, which we're using to show our scale
+        function drawLegend(legend, legendColorScale) {      
+              
           const legendWidth = legend.attr("width");
           const legendHeight = legend.attr("height");
-          const legendMinMax = d3.extent(legendColorScale.domain()); // way to recover the minMax from most kinds of scales
+          const legendMinMax = d3.extent(legendColorScale.domain()); 
           const barHeight = 60;
-          const stepSize = 4; // warning, not using a canvas element so lots of rect tags will be created for low stepSize, causing issues with performance
-          // Extend the minmax by 1 in either direction to expose more features
-          const pixelScale = d3.scaleLinear().domain([0,legendWidth-40]).range([legendMinMax[0]-1,legendMinMax[1]+1]); // In this case the "data" are pixels, and we get numbers to use in colorScale
+          const stepSize = 4; 
+          const pixelScale = d3.scaleLinear().domain([0,legendWidth-40]).range([legendMinMax[0]-1,legendMinMax[1]+1]);
           const barScale = d3.scaleLinear().domain([legendMinMax[0]-1,legendMinMax[1]+1]).range([0,legendWidth-40]);
           const barAxis = d3.axisBottom(barScale);
-          // Check if we're using a quantile scale - if so, we can do better
           if (legendColorScale.hasOwnProperty('quantiles')) {
-            // Use the quantile breakpoints plus the min and max of the scale as tick values
             barAxis.tickValues(legendColorScale.quantiles().concat( legendMinMax ));
           }
           legend.append("g")
             .attr("class", "colorbar axis")
             .attr("transform","translate("+(20)+","+(barHeight+5)+")")
             .call(barAxis);
-          // Draw rects of color down the bar
           let bar = legend.append("g").attr("transform","translate("+(20)+","+(0)+")")
           for (let i=0; i<legendWidth-40; i=i+stepSize) {
             bar.append("rect")
@@ -312,80 +308,82 @@
               .attr("y", 0)
               .attr("width", stepSize)
               .attr("height",barHeight)
-              .style("fill", legendColorScale( pixelScale(i) )); // pixels => countData => color
+              .style("fill", legendColorScale( pixelScale(i) )); 
           }
-          // Put lines in to mark actual min and max of our data
           bar.append("line").attr("stroke","slategrey").attr("stroke-width",3).attr("x1", barScale(legendMinMax[0])).attr("x2", barScale(legendMinMax[0])).attr("y1", 0).attr("y1", barHeight+4);
           bar.append("line").attr("stroke","slategrey").attr("stroke-width",3).attr("x1", barScale(legendMinMax[1])).attr("x2", barScale(legendMinMax[1])).attr("y1", 0).attr("y1", barHeight+4);
           
         }
-  
+        // adding state / county lines appropriately (initializing the map)
 
-    viewport.append("path").datum(statesMesh)
-            .attr("class","state-outline")
-            .attr("d", path);
-    viewport.selectAll("path.state")
-            .style("fill", d => { 
-              return colorScale( stateCounts[ idToState[Number(d.id)] ]) 
-            });
+        viewport.append("path").datum(statesMesh)
+                .attr("class","state-outline")
+                .attr("d", path);
 
-     map.append("path")
-          .datum(countiesMesh)
-          .attr("class","county-outline")
-          .attr("opacity", 0)
-          .attr("fill", 'transparent')
-          .attr("d", path);   
-    
+        map.append("path")
+            .datum(countiesMesh)
+            .attr("class","county-outline")
+            .attr("opacity", 0)
+            .attr("fill", 'transparent')
+            .attr("d", path);   
 
-      viewport.selectAll("path.county").data(counties.features)
-          .join("path")
-         .attr("class", "county")
-         .attr("opacity", 0)
-         .attr("fill", 'transparent')
-         .attr("d", path);
+        viewport.selectAll("path.county")
+                .data(counties.features)
+                .join("path")
+                .attr("class", "county")
+                .attr("opacity", 0)
+                .attr("fill", 'transparent')
+                .attr("d", path);
 
-         viewport.selectAll("path.state").data(states.features)
-            .join("path")
-            .attr("class", "state")
-            .attr("d", path);
-        map.selectAll("path.state-back").data(states.features)
+        viewport.selectAll("path.state")
+                  .data(states.features)
+                  .join("path")
+                  .attr("class", "state")
+                  .attr("d", path);
+
+        // map is the background map used to draw the chloropleth 
+        map.selectAll("path.state-back")
+            .data(states.features)
             .join("path")
             .attr("class", "state-back")
             .attr("d", path)
             .attr("stroke", "none")
-            .style("fill", "slategrey")
+            .style("fill", "slategrey");
         
-        // police death button 
-        console.log(d3.select("div#button-spot"));
+        // police death button to show / hide chloropleth 
         d3.select("div.button-spot")
             .append("button")
             .attr("class", "police-death")
             .text("Police Deaths")
             .style("background-color", "lightgrey")
-            .on("click", function () {
-              let p  =  map.selectAll("path.state-back");
-              console.log(p.style("fill"));
-              if (p.style("fill") === "slategrey" || p.style("fill") === "rgb(112, 128, 144)"){
-                p.transition().style("fill", function(d,i) {
-                      return colorScale( stateCounts[ idToState[Number(d.id)] ])
-                    }).duration(1000);
-                d3.select("button.police-death")
-                  .transition()
-                  .duration(1000)
-                  .style("background-color", "#2196F3")
-                  .style("color", "#fff")
-              } else{
-                p.transition().style("fill", "slategrey").duration(1000);
-                d3.select("button.police-death")
-                  .transition()
-                  .duration(1000)
-                  .style("background-color", "lightgrey")
-                  .style("color", "black")
-              }
-            })
+            .on("click", buttonClicked)
 
-        function drawCircs(){
-            viewport.selectAll("circle.dot").data(new_groups)
+        // appropriately turns on/off the chloropleth depending on current state of map 
+        function buttonClicked() {
+          let p  =  map.selectAll("path.state-back");
+          if (p.style("fill") === "slategrey" || p.style("fill") === "rgb(112, 128, 144)"){
+            p.transition().style("fill", function(d,i) {
+              return colorScale( stateCounts[ idToState[Number(d.id)] ])
+              }).duration(1000);
+            d3.select("button.police-death")
+              .transition()
+              .duration(1000)
+              .style("background-color", "#2196F3")
+              .style("color", "#fff")
+          } else{
+              p.transition().style("fill", "slategrey").duration(1000);
+              d3.select("button.police-death")
+                .transition()
+                .duration(1000)
+                .style("background-color", "lightgrey")
+                .style("color", "black")
+          }
+        }
+        // draws the points that represent cities where the radius reflects the number 
+        // of people that have died by a police officer from 2013 to 2021 
+        function drawCircs() {
+            viewport.selectAll("circle.dot")
+                    .data(new_groups)
                     .join("circle")
                     .attr("class","dot")
                     .attr("r", d => circleScale(d[1].length))
@@ -397,9 +395,7 @@
         }
         drawCircs(); 
 
-        // ZOOM 
-        
-        
+        // implementing zoom capability on map 
         var zoom = d3.zoom()
                     .scaleExtent([1, 10])
                     .translateExtent([[0, 0], [width, height]])
@@ -413,106 +409,101 @@
 
         svg.call(zoom);
         svg.call(zoom.transform, d3.zoomIdentity);
-
+        // adjust the state / county lines on zoom
         function zoomed({transform}){
           viewport.attr("transform", transform.toString() );
           map.attr("transform", transform.toString() );
           viewport.selectAll(".state")
                   .style("stroke-width", 2 / transform.k);
-
           if (transform.k > 3){
             viewport.selectAll(".county")
                     .style("stroke-width", 1 / transform.k);
           }
         }
-       
-
-      let slider = d3
-        .sliderBottom()
-        .min(circleExtent[0])
-        .max(circleExtent[1])
-        .width(300)
-        .ticks(5)
-        .default([1, 133])
-        .fill('#2196f3')
-        .on('onchange', val => {
-          console.log(val);
-          let truncated = val.map(d => Math.floor(d));
-          d3.select('span#value').text(truncated.join(' to ') + " deaths");
-          updateSlide(truncated);
-
-        });
-      
-      function updateSlide(v){
-
-        d3.selectAll("circle.dot").each( function () {
-              let circle = d3.select(this);
-              let data = circle.attr("data")
-              if (Number(data) >= v[0] && Number(data) <= v[1]){
-                circle.attr("visibility", "");
-              }else{
-                circle.attr("visibility", "hidden");
-              }
+      // multi slider implemented using https://github.com/johnwalley/d3-simple-slider library
+      // multi slider used to filter cities by death count 
+        let slider = d3.sliderBottom()
+                        .min(circleExtent[0])
+                        .max(circleExtent[1])
+                        .width(300)
+                        .ticks(5)
+                        .default([1, 133])
+                        .fill('#2196f3')
+                        .on('onchange', val => {
+                          let truncated = val.map(d => Math.floor(d));
+                          d3.select('span#value').text(truncated.join(' to ') + " deaths");
+                          updateSlide(truncated);
+                        });
+        // appropriately updates map based on slider configuration 
+        function updateSlide(v){
+          d3.selectAll("circle.dot").each( function () {
+                let circle = d3.select(this);
+                let data = circle.attr("data")
+                if (Number(data) >= v[0] && Number(data) <= v[1]){
+                  circle.attr("visibility", "");
+                }else{
+                  circle.attr("visibility", "hidden");
+                }
             }) 
-      }
-      let range = d3
-        .select('div#slider')
-        .append('svg')
-        .attr('width', 350)
-        .attr('height', 70)
-        .append('g')
-        .attr('transform', 'translate(30,30)')
-        .call(slider);
-
-
-
-
-                                
-          
-
-
-        d3.selectAll("circle.dot").on("click", clickedCircle);
+        }
         
+        let range = d3.select('div#slider')
+                      .append('svg')
+                      .attr('width', 350)
+                      .attr('height', 70)
+                      .append('g')
+                      .attr('transform', 'translate(30,30)')
+                      .call(slider);
+        
+        d3.selectAll("circle.dot").on("click", clickedCircle);
+          
         let lastClicked;
         const sidebar = d3.select("#victims");
-        const mouseover = sidebar.append("g").attr("class","mouseover")
-                       .attr("transform",`translate(0,0)`);
-        const frame = mouseover.append("rect").attr("class","frame")
-                         // we style this in <head>
-                         .attr("x", 0).attr("y", 0)
-                         .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
-                         .attr("height", 130);  // set width later
+        
+        // Credit Prof. Rz INFO 3300 repo for textbox and mouseover code
+        const mouseover = sidebar.append("g")
+                                  .attr("class","mouseover")
+                                  .attr("transform",`translate(0,0)`);
+        const frame = mouseover.append("rect")
+                                .attr("class","frame")
+                                .attr("x", 0).attr("y", 0)
+                                .attr("rx", 5).attr("ry", 5)  
+                                .attr("height", 130);  
         const textbox = mouseover.append("g").attr("transform","translate(20,10)");
         const info = d3.select("#individuals");
-        const info_mouseover = info.append("g").attr("class","info_mouseover")
-                       .attr("transform",`translate(0,0)`);
-        const info_frame = info_mouseover.append("rect").attr("class","info_frame")
-                         // we style this in <head>
-                         .attr("x", 0).attr("y", 0)
-                         .attr("rx", 5).attr("ry", 5)  // rx and ry round corners
-                         .attr("height", 130);  // set width later
-        const info_textbox = info_mouseover.append("g").attr("transform","translate(20,10)");
-        
+        const info_mouseover = info.append("g")
+                                    .attr("class","info_mouseover")
+                                    .attr("transform",`translate(0,0)`);
+        const info_frame = info_mouseover.append("rect")
+                                          .attr("class","info_frame")
+                                          .attr("x", 0).attr("y", 0)
+                                          .attr("rx", 5).attr("ry", 5) 
+                                          .attr("height", 130); 
+        const info_textbox = info_mouseover.append("g")
+                                            .attr("transform","translate(20,10)");
+          
         let deathsInCity;
         
+        // this function draws people killed by police in each city and associates data with each svg
         function drawPeople(dot) {
           textbox.html(''); 
-          textbox.append("text").text(dot.datum()[0])
-                 .attr("x", 0).attr("y", 10);
+          textbox.append("text")
+                  .text(dot.datum()[0])
+                  .attr("x", 0)
+                  .attr("y", 10);
 
-           let deaths = dot.datum()[1];
+          let deaths = dot.datum()[1];
 
-           let numDeaths = deaths.length;
+          let numDeaths = deaths.length;
 
-           let numRows = Math.floor(numDeaths / 10);
+          let numRows = Math.floor(numDeaths / 10);
 
           sidebar.attr("height", (numRows * 28) + 100)
 
+          let xpos = 18;
+          let ypos = 50;
 
-
-           let xpos = 18;
-           let ypos = 50;
-
+          // this section arranges the victims into a grid
           deaths.forEach(d => {
             d.xposition = xpos;
             d.yposition = ypos;
@@ -524,68 +515,75 @@
               xpos = 18;
             }
           })
-
-          deathsInCity = sidebar.selectAll("image.death").data(deaths)
-                          .enter()
-                          .append('image')
-                          .attr("xlink:href", "standing-up-man-.svg")
-                          .attr("class","death")
-                          .attr("r", 5)
-                          .attr("fill", "darkred")
-                          .attr("x", d => d.xposition)
-                          .attr("y", d => d.yposition)
-                          .attr("width", 20)
-                          .attr("height", 20);
+        // svg of standing-up-man from https://www.svgrepo.com/svg/6998/standing-up-man
+        // red svg of standing up man created using https://vectorpaint.yaks.co.nz/
+        deathsInCity = sidebar.selectAll("image.death")
+                              .data(deaths)
+                              .enter()
+                              .append('image')
+                              .attr("xlink:href", "standing-up-man-.svg")
+                              .attr("class","death")
+                              .attr("r", 5)
+                              .attr("x", d => d.xposition)
+                              .attr("y", d => d.yposition)
+                              .attr("width", 20)
+                              .attr("height", 20);
         }
 
         d3.select("div.desc").append("div").attr("class", "description").attr("id", "description");
         d3.select("div.desc").append("a").attr("class", "description").attr("id", "url").attr("target", "_blank");
 
+        // this function triggers a series of visual changes once a city is selected to show victim data for each city
         function clickedCircle() {
           document.getElementById("description").innerHTML = "";
           document.getElementById("url").innerHTML = "";
           document.getElementById("card2").style.backgroundColor = "lightgrey";
           document.getElementById("card3").style.backgroundColor = "slategray";
           document.getElementById("card4").style.backgroundColor = "slategray";
-          if(d3.select("#instructions-card-1") != null)
+          if(d3.select("#instructions-card-1") != null){
             d3.select("#instructions-card-1").remove();
-          if(document.getElementById("instructions-card-2") != null)
+          }
+          if(document.getElementById("instructions-card-2") != null){
             document.getElementById("instructions-card-2").style.visibility = "visible";
+          }
+              
           info_textbox.html(''); 
           const victimSvg = d3.select("#victims");
           victimSvg.selectAll("image.death").remove();
+          
           if(lastClicked != null) {
             lastClicked.attr("stroke-width", 0);
           }
 
           let dot = d3.select(this);
-
           lastClicked = dot;
-
           d3.select(this).attr("stroke","black")
                          .attr("stroke-opacity", "100%")
                          .attr("stroke-width", d => circleScale(d[1].length) / 4);
-
           drawPeople(dot);
                  
           let lastMan;
           d3.selectAll("image.death").on("click", clickedDeath);
+
+          // this function displays individual victim data once a user clicks on a victim
           function clickedDeath() {
             document.getElementById("description").innerHTML = "";
             document.getElementById("url").innerHTML = "";
             document.getElementById("card3").style.backgroundColor = "lightgrey";
             document.getElementById("card4").style.backgroundColor = "lightgrey";
             d3.select("#card2").attr("background-color", "lightgrey");
-            if(d3.select("#instructions-card-2") != null)
+            
+            if(d3.select("#instructions-card-2") != null){
               d3.select("#instructions-card-2").remove();
+            }
             info_textbox.html(''); 
             let d = d3.select(this).datum();
+            
             if(lastMan != null) {
               lastMan.attr("xlink:href", "standing-up-man-.svg");
             }
 
             lastMan = d3.select(this);
-
             d3.select(this).attr("xlink:href", "red-man-standing.svg")
 
             let name = `Victim's Name: ${d['Victim\'s name']}`;
